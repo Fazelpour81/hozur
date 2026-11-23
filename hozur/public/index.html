@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ثبت حضور ورودی</title>
+<style>
+/* Layout: one narrow column built for a phone at the door; sticky search on top, thumb-reach nav at the bottom. */
+:root{
+  --bg:#f1f4f6; --card:#ffffff; --ink:#122028; --mute:#5d6b75; --line:#dbe2e7;
+  --accent:#0a5cd6; --accent-ink:#ffffff;
+  --ok:#0f7a52; --ok-bg:#e1f4ea; --ok-line:#a9dcc2;
+  --warn:#9a5b00; --warn-bg:#fff1d6; --bad:#b3261e; --bad-bg:#fde8e6;
+  --font:Vazirmatn,Tahoma,system-ui,-apple-system,'Segoe UI',Tahoma,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e161c; --card:#16212a; --ink:#e8eef2; --mute:#9aa9b4; --line:#27343f;
+    --accent:#5b9bff; --accent-ink:#06182f;
+    --ok:#4cd39a; --ok-bg:#12332a; --ok-line:#1f5b46;
+    --warn:#f0b64a; --warn-bg:#35280d; --bad:#ff8a80; --bad-bg:#3a1a18;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e161c; --card:#16212a; --ink:#e8eef2; --mute:#9aa9b4; --line:#27343f;
+  --accent:#5b9bff; --accent-ink:#06182f;
+  --ok:#4cd39a; --ok-bg:#12332a; --ok-line:#1f5b46;
+  --warn:#f0b64a; --warn-bg:#35280d; --bad:#ff8a80; --bad-bg:#3a1a18;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:17px;line-height:1.5}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.app{max-width:600px;margin:0 auto;padding:0 0 96px}
+.top{position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 16px 8px;border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:10px}
+.count{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.count b{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.count small{color:var(--mute);font-weight:400;font-size:14px}
+.prog{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--ok);width:0;transition:width .25s}
+.pres{font-size:13px;color:var(--mute)}.pres .dot{display:inline-block;margin-inline-end:5px}.me{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:6px 12px;font-size:14px;display:flex;align-items:center;gap:6px;max-width:48%}
+.me span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--warn);flex:none}
+.dot.on{background:var(--ok)} .dot.off{background:var(--bad)}
+.sbox{position:relative}
+#q{width:100%;height:58px;border-radius:14px;border:2px solid var(--line);background:var(--card);padding:0 16px 0 52px;font-size:20px;outline:none}
+#q:focus{border-color:var(--accent)}
+#qx{position:absolute;left:8px;top:8px;width:42px;height:42px;border:0;background:transparent;color:var(--mute);font-size:26px;border-radius:10px;display:none}
+.chips{display:flex;gap:8px;margin-top:10px}
+.chip{flex:1;height:40px;border-radius:20px;border:1px solid var(--line);background:var(--card);font-size:15px;font-variant-numeric:tabular-nums}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.view{padding:12px 16px;display:none}
+.view.on{display:block}
+h2{font-size:15px;font-weight:700;color:var(--mute);margin:14px 2px 8px}
+.list{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;min-height:72px;width:100%;text-align:right}
+button.row:active{transform:scale(.99);background:var(--ok-bg)}
+.row .info{flex:1;min-width:0}
+.nm{font-size:19px;font-weight:700;line-height:1.35;overflow-wrap:anywhere}
+.sub{font-size:14px;color:var(--mute);margin-top:2px;overflow-wrap:anywhere}
+.sub .t{direction:ltr;unicode-bidi:isolate;display:inline-block}
+.tick{flex:none;width:46px;height:46px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;color:transparent}
+.row.here{background:var(--ok-bg);border-color:var(--ok-line)}
+.row.pend{background:var(--warn-bg);border-color:var(--warn)}.row.pend .tick{background:var(--warn);border-color:var(--warn);color:#fff}.row.pend .sub{color:var(--warn)}.cfm{flex:none;border:0;background:var(--ok);color:#fff;border-radius:10px;padding:10px 14px;font-weight:700;font-size:15px}.row.here .tick{background:var(--ok);border-color:var(--ok);color:#fff}
+.row.here .sub{color:var(--ok)}
+.row .tick svg{width:24px;height:24px}
+.cancel{flex:none;border:1px solid var(--ok-line);background:transparent;color:var(--ok);border-radius:10px;padding:6px 10px;font-size:14px}
+.cancel.sure{background:var(--bad);color:#fff;border-color:var(--bad)}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:10px;background:var(--warn-bg);color:var(--warn);margin-inline-start:6px;vertical-align:middle;font-weight:500}
+.empty{background:var(--card);border:1px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--mute)}
+.btn{height:52px;border-radius:12px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:17px;padding:0 18px;width:100%}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.small{height:40px;width:auto;font-size:15px;padding:0 14px}
+.btn:disabled{opacity:.5}
+.empty .btn{margin-top:12px}
+.more{margin-top:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px;margin-bottom:12px}
+.card h3{margin:0;font-size:17px}
+label{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--mute)}
+label input{height:52px;border-radius:12px;border:2px solid var(--line);background:var(--bg);padding:0 14px;font-size:18px;color:var(--ink);outline:none;width:100%}
+label input:focus{border-color:var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ck{flex-direction:row;align-items:center;gap:10px;color:var(--ink);font-size:16px}
+.ck input{width:24px;height:24px;flex:none}
+.note{font-size:14px;color:var(--mute)}
+.warnbox{background:var(--warn-bg);color:var(--warn);border-radius:12px;padding:12px;font-size:15px}
+.badbox:empty{display:none}.badbox{background:var(--bad-bg);color:var(--bad);border-radius:12px;padding:12px;font-size:15px}
+.oprow{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)}
+.oprow:last-child{border-bottom:0}
+.oprow .n{flex:1;font-weight:500}
+.oprow .c{color:var(--mute);font-size:14px;font-variant-numeric:tabular-nums}
+.rm{border:0;background:transparent;color:var(--bad);font-size:14px;padding:8px}
+.nav{position:fixed;bottom:0;left:0;right:0;z-index:6;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.nav div{max-width:600px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+.nav button{height:60px;border:0;background:transparent;color:var(--mute);font-size:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.nav button svg{width:24px;height:24px}
+.nav button[aria-current="page"]{color:var(--accent);font-weight:700}
+.toast{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));max-width:576px;margin:0 auto;background:var(--ink);color:var(--bg);border-radius:12px;padding:12px 14px;display:none;align-items:center;gap:12px;z-index:9;font-size:16px}
+.toast.on{display:flex}
+.toast.err{background:var(--bad);color:#fff}
+.toast span{flex:1}
+.toast button{border:0;background:transparent;color:inherit;font-weight:700;text-decoration:underline;font-size:16px;padding:6px}
+.modal{position:fixed;inset:0;background:rgba(5,12,18,.6);z-index:20;display:none;align-items:flex-end;justify-content:center}
+.modal.on{display:flex}
+.sheet{background:var(--bg);width:100%;max-width:600px;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:88%;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.sheet h3{margin:0 0 4px;font-size:20px}
+.pick{height:58px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-size:18px;font-weight:700}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="bar">
+      <div class="count"><b id="cnt">...</b><div class="prog"><i id="prog"></i></div><small class="pres" id="pres"></small></div>
+      <button class="me" id="me" type="button"><i class="dot" id="dot"></i><span id="meName">انتخاب ثبت‌کننده</span></button>
+    </div>
+    <div id="banner"></div>
+    <div id="searchWrap">
+      <div class="sbox">
+        <input id="q" type="search" inputmode="search" enterkeyhint="done" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="نام، فامیل، نام پدر یا چند رقم تلفن" aria-label="جستجوی نام">
+        <button id="qx" type="button" aria-label="پاک کردن جستجو">&times;</button>
+      </div>
+      <div class="chips" role="group" aria-label="فیلتر">
+        <button class="chip" data-f="all" aria-pressed="true" type="button">همه</button>
+        <button class="chip" data-f="absent" aria-pressed="false" type="button">غایب</button>
+        <button class="chip" data-f="pending" aria-pressed="false" type="button">منتظر</button>
+        <button class="chip" data-f="here" aria-pressed="false" type="button">تایید</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="view on" id="v-home"><div id="list"></div></section>
+
+    <section class="view" id="v-add">
+      <form class="card" id="addForm" autocomplete="off">
+        <h3>افزودن فرد جدید</h3>
+        <div class="grid2">
+          <label>نام<input id="a-fn" required></label>
+          <label>نام خانوادگی<input id="a-ln" required></label>
+        </div>
+        <label>نام پدر<input id="a-fa" required></label>
+        <label>شماره تماس<input id="a-ph" type="tel" inputmode="numeric" placeholder="09..." required></label>
+        <label>اسم مستعار (اختیاری)<input id="a-al"></label>
+        <label class="ck"><input type="checkbox" id="a-now" checked>همین حالا حاضر ثبت شود</label>
+        <div id="addMsg"></div>
+        <button class="btn" type="submit" id="addBtn">افزودن به لیست</button>
+      </form>
+    </section>
+
+    <section class="view" id="v-admin">
+      <div class="card">
+        <h3>ثبت‌کننده‌ها (ادمین‌ها)</h3>
+        <div id="opList"></div>
+        <p class="note">برای افزودن یا حذف ادمین، رمز مدیر را وارد کنید. هر ادمین با نام و پین خودش وارد می‌شود. افزودن نام تکراری، پین او را تغییر می‌دهد.</p>
+        <label>رمز مدیر<input id="op-master" type="password" autocomplete="off"></label>
+        <div class="grid2">
+          <label>نام ادمین<input id="op-name"></label>
+          <label>پین (۴ تا ۸ رقم)<input id="op-pin" inputmode="numeric" autocomplete="off"></label>
+        </div>
+        <label class="ck"><input type="checkbox" id="op-mgr">مدیر کل (تایید نهایی حضور)</label>
+        <button class="btn small" type="button" id="op-add">افزودن / تغییر پین</button>
+      </div>
+      <div class="card">
+        <h3>خروجی</h3>
+        <p class="note">فایل اکسل شامل همه افراد، وضعیت حضور، زمان ثبت و نام ثبت‌کننده است.</p>
+        <button class="btn" type="button" id="exp">دانلود اکسل</button>
+        <div id="expMsg" class="note"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<nav class="nav" aria-label="بخش‌ها"><div>
+  <button data-v="home" type="button" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>جستجو</button>
+  <button data-v="add" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>فرد جدید</button>
+  <button data-v="admin" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>مدیریت</button>
+</div></nav>
+
+<div class="toast" id="toast" role="status"><span id="toastTxt"></span><button id="toastBtn" type="button"></button></div>
+
+<div class="modal" id="opModal"><div class="sheet">
+  <h3>ورود ادمین</h3>
+  <p class="note">نام خود را انتخاب کنید.</p>
+  <div id="opPick" style="display:flex;flex-direction:column;gap:8px"></div>
+  <div id="pinBox" style="display:none">
+    <label><span id="pinFor">پین</span><input id="pin" type="password" inputmode="numeric" autocomplete="off"></label>
+    <button class="btn" type="button" id="pinGo" style="margin-top:8px">ورود</button>
+    <p class="badbox" id="loginErr"></p>
+  </div>
+  <p class="note" id="opHelp"></p>
+  <button class="btn ghost" type="button" id="opClose">بستن</button>
+</div></div>
+<div class="modal" id="meModal"><div class="sheet"><h3 id="meTitle"></h3><p class="note" id="meSub"></p><button class="btn" type="button" id="meOut">خروج از حساب</button><button class="btn ghost" type="button" id="meClose">بستن</button></div></div>
+
+<script>
+(function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const FAD='۰۱۲۳۴۵۶۷۸۹';
+const fa=n=>String(n).replace(/\d/g,d=>FAD[d]);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* ---------- Persian-aware normalisation ---------- */
+function norm(s){
+  return String(s||'').toLowerCase()
+    .replace(/[ً-ٰٟـ]/g,'')
+    .replace(/[يى]/g,'ی').replace(/ك/g,'ک').replace(/ة/g,'ه').replace(/[أإٱآ]/g,'ا').replace(/ؤ/g,'و').replace(/ئ/g,'ی')
+    .replace(/[‌‍‏‎]/g,' ')
+    .replace(/[۰-۹]/g,d=>'۰۱۲۳۴۵۶۷۸۹'.indexOf(d)).replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+    .replace(/[^\p{L}\p{N}\s]/gu,' ').replace(/\s+/g,' ').trim();
+}
+/* sound-alike folding for the "guess" mode */
+function phon(s){
+  return s.replace(/[ثص]/g,'س').replace(/[ذضظ]/g,'ز').replace(/ط/g,'ت').replace(/ح/g,'ه').replace(/غ/g,'ق').replace(/ع/g,'ا').replace(/(.)\1+/g,'$1');
+}
+function lev(a,b,max){
+  if(Math.abs(a.length-b.length)>max)return max+1;
+  let prev=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){
+    const cur=[i];let mn=i;
+    for(let j=1;j<=b.length;j++){
+      const v=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+      cur[j]=v;if(v<mn)mn=v;
+    }
+    if(mn>max)return max+1;
+    prev=cur;
+  }
+  return prev[b.length];
+}
+
+/* ---------- people ---------- */
+function mk(id,last,first,father,phone,alias,isExtra,meta){
+  const name=(last+' '+first).trim();
+  const p={id,name,first,last,father:father||'',phone:phone||'',alias:alias||'',extra:!!isExtra,meta:meta||null};
+  p.w=norm(name).split(' ').filter(Boolean);
+  p.f=norm(p.father).split(' ').filter(Boolean);
+  p.a=norm(p.alias).split(' ').filter(Boolean);
+  p.w2=p.w.map(phon);p.f2=p.f.map(phon);p.a2=p.a.map(phon);
+  p.ph=norm(p.phone).replace(/\s/g,'');
+  p.all=p.w.concat(p.f,p.a);
+  return p;
+}
+let people=[];
+let idx=new Map();
+
+function tokScore(t,t2,p){
+  if(/^\d+$/.test(t)){return (t.length>=3&&p.ph.includes(t))?{s:90,f:false}:{s:0,f:false};}
+  let best=0;
+  const fields=[[p.w,1],[p.a,1],[p.f,.35]];
+  for(const [ws,wt] of fields){
+    for(const w of ws){
+      let s=0;
+      if(w===t)s=100;else if(w.startsWith(t))s=85;else if(t.length>=3&&w.includes(t))s=55;
+      if(s*wt>best)best=s*wt;
+    }
+  }
+  if(best>0)return {s:best,f:false};
+  const k=t2.length>=6?2:1;
+  const f2=[[p.w2,1],[p.a2,1],[p.f2,.35]];
+  for(const [ws,wt] of f2){
+    for(const w of ws){
+      let s=0;
+      if(w.startsWith(t2))s=70;
+      else if(t2.length>=3){
+        const d=Math.min(lev(t2,w.slice(0,t2.length),k),lev(t2,w,k));
+        if(d<=k)s=45-d*10;
+      }
+      if(s*wt>best)best=s*wt;
+    }
+  }
+  return {s:best,f:true};
+}
+function search(q){
+  const n=norm(q);
+  if(!n)return {exact:[],near:[]};
+  const toks=n.split(' ');const t2s=toks.map(phon);
+  const exact=[],near=[];
+  for(const p of people){
+    let tot=0,fz=false,ok=true;
+    for(let i=0;i<toks.length;i++){
+      const r=tokScore(toks[i],t2s[i],p);
+      if(r.s<=0){ok=false;break}
+      tot+=r.s;if(r.f)fz=true;
+    }
+    if(!ok)continue;
+    (fz?near:exact).push({p,s:tot});
+  }
+  const srt=(a,b)=>b.s-a.s||a.p.name.localeCompare(b.p.name,'fa');
+  exact.sort(srt);near.sort(srt);
+  return {exact:exact.map(x=>x.p),near:near.map(x=>x.p)};
+}
+
+/* ---------- state ---------- */
+let token=null,op=null,att={},ops=[],pres={},conn='connecting',lastBeat=0,es=null,pingT=null,watchT=null,loginBusy=false;
+const cid=Math.random().toString(36).slice(2)+Date.now().toString(36);
+let view='home',filter='all',limit=40;
+const store=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){return null}};
+const fmtT=ms=>new Date(ms).toLocaleTimeString('fa-IR',{hour:'2-digit',minute:'2-digit'});
+let master='';
+
+async function api(path,method,body,hdr){
+  const h=Object.assign({'Content-Type':'application/json'},hdr||{});
+  if(token)h.Authorization='Bearer '+token;
+  let r;
+  try{r=await fetch(path,{method:method||'GET',headers:h,body:body?JSON.stringify(body):undefined})}
+  catch(e){const er=new Error('ارتباط با سرور برقرار نیست');er.net=true;throw er}
+  let j={};try{j=await r.json()}catch(e){}
+  if(r.status===401&&token&&!path.includes('login')){logout(true)}
+  if(!r.ok){const er=new Error(j.error||'خطا');er.status=r.status;er.data=j;throw er}
+  return j;
+}
+
+/* ---------- UI helpers ---------- */
+let toastT=null;
+function toast(msg,actLabel,act,isErr){
+  const t=$('#toast');$('#toastTxt').textContent=msg;
+  const b=$('#toastBtn');b.style.display=actLabel?'':'none';b.textContent=actLabel||'';
+  b.onclick=()=>{t.classList.remove('on');act&&act()};
+  t.classList.toggle('err',!!isErr);t.classList.add('on');
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),actLabel?6000:3500);
+}
+const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+function rowHTML(p){
+  const a=att[p.id];
+  const sub=[];
+  if(p.father)sub.push('فرزند '+esc(p.father));
+  if(p.phone)sub.push('<span class="t">…'+fa(esc(p.phone.slice(-4)))+'</span>');
+  if(p.alias)sub.push('«'+esc(p.alias)+'»');
+  const nm=esc(p.name)+(p.extra?'<span class="tag">جدید</span>':'');
+  const mgr=op&&op.role==='manager';
+  if(a&&a.conf)return `<div class="row here"><div class="tick">${CHECK}</div><div class="info"><div class="nm">${nm}</div><div class="sub">${sub.join(' · ')}</div><div class="sub">تایید نهایی ${esc(fmtT(a.conf.at))} · مدیر: ${esc(a.conf.by)} · ثبت: ${esc(a.by)}</div></div>${mgr?`<button class="cancel" data-cancel="${esc(p.id)}" type="button">لغو</button>`:''}</div>`;
+  if(a)return `<div class="row pend"><div class="tick">${CHECK}</div><div class="info"><div class="nm">${nm}</div><div class="sub">${sub.join(' · ')}</div><div class="sub">منتظر تایید مدیر کل · ${esc(fmtT(a.at))} · ثبت: ${esc(a.by)}</div></div>${mgr?`<button class="cfm" data-conf="${esc(p.id)}" type="button">تایید</button>`:''}<button class="cancel" data-cancel="${esc(p.id)}" type="button">لغو</button></div>`;
+  return `<button class="row" data-mark="${esc(p.id)}" type="button"><div class="info"><div class="nm">${nm}</div><div class="sub">${sub.join(' · ')||'&nbsp;'}</div></div><div class="tick">${CHECK}</div></button>`;
+}
+function counts(){let here=0,conf=0;people.forEach(p=>{const a=att[p.id];if(a){here++;if(a.conf)conf++}});return {here,conf,pend:here-conf,total:people.length}}
+function renderHead(){
+  const c=counts();
+  $('#cnt').innerHTML=`${fa(c.conf)} <small>تایید شده از ${fa(c.total)}${c.pend?' · '+fa(c.pend)+' منتظر تایید':''}</small>`;
+  $('#prog').style.width=(c.total?c.conf/c.total*100:0)+'%';
+  const f=$$('.chip');f[1].textContent='غایب '+fa(c.total-c.here);f[2].textContent='منتظر '+fa(c.pend);f[3].textContent='تایید '+fa(c.conf);
+  $('#meName').textContent=op?op.name+(op.role==='manager'?' (مدیر کل)':''):'ورود';
+  $('#dot').className='dot'+(conn==='on'?' on':conn==='off'?' off':'');
+  const onl=Object.values(pres).filter(x=>x.online>0).length;
+  $('#pres').innerHTML=op?(conn==='on'?'<i class="dot on"></i>آنلاین':conn==='off'?'<i class="dot off"></i>آفلاین':'<i class="dot"></i>در حال اتصال')+(conn==='on'?' · ادمین آنلاین: '+fa(onl):''):'';
+  $('#banner').innerHTML=(op&&conn==='off')?'<div class="warnbox" style="margin-bottom:10px">آفلاین هستید. تا برقراری ارتباط نمی‌توانید ثبت کنید. در حال اتصال دوباره...</div>':'';
+}
+function renderHome(){
+  const qv=$('#q').value,n=norm(qv);
+  $('#qx').style.display=qv?'block':'none';
+  let html='';
+  const pass=p=>{const a=att[p.id];return filter==='all'||(filter==='absent'?!a:filter==='pending'?!!a&&!a.conf:!!a&&!!a.conf)};
+  if(n){
+    const r=search(qv),ex=r.exact.filter(pass),ne=r.near.filter(pass),all=ex.concat(ne);
+    if(!all.length){
+      html=`<div class="empty">نتیجه‌ای پیدا نشد.<br><button class="btn" data-addq type="button">افزودن «${esc(qv.trim())}» به لیست</button></div>`;
+    }else{
+      const shown=all.slice(0,limit),exN=ex.length;
+      html+='<div class="list">';
+      shown.forEach((p,i)=>{
+        if(i===exN&&exN>0)html+='</div><h2>نزدیک به جستجوی شما</h2><div class="list">';
+        if(i===0&&exN===0)html+='</div><h2>شاید منظور شما این‌ها باشد</h2><div class="list">';
+        html+=rowHTML(p);
+      });
+      html+='</div>';
+      if(all.length>limit)html+=`<button class="btn ghost more" data-more type="button">نمایش ${fa(all.length-limit)} مورد دیگر</button>`;
+      html+=`<button class="btn ghost more" data-addq type="button">پیدا نشد؟ افزودن «${esc(qv.trim())}»</button>`;
+    }
+  }else if(filter==='all'){
+    const rec=Object.entries(att).sort((a,b)=>b[1].at-a[1].at).slice(0,10).map(e=>idx.get(e[0])).filter(Boolean);
+    html='<h2>آخرین حضورها</h2>'+(rec.length?'<div class="list">'+rec.map(rowHTML).join('')+'</div>':'<div class="empty">هنوز کسی ثبت نشده است. نام اولین نفر را بنویسید.</div>');
+  }else{
+    const arr=people.filter(pass);
+    if(filter==='here'||filter==='pending')arr.sort((a,b)=>att[b.id].at-att[a.id].at);else arr.sort((a,b)=>a.name.localeCompare(b.name,'fa'));
+    const bulk=(filter==='pending'&&op&&op.role==='manager'&&arr.length)?`<button class="btn" data-confall type="button" style="margin-bottom:10px">تایید همه (${fa(arr.length)} نفر)</button>`:'';
+    html=bulk+(arr.length?'<div class="list">'+arr.slice(0,limit).map(rowHTML).join('')+'</div>':'<div class="empty">موردی نیست.</div>');
+    if(arr.length>limit)html+=`<button class="btn ghost more" data-more type="button">نمایش ${fa(arr.length-limit)} مورد دیگر</button>`;
+  }
+  $('#list').innerHTML=html;
+}
+function renderAdmin(){
+  const per={};Object.values(att).forEach(a=>{per[a.name||a.by]=(per[a.name||a.by]||0)+1});
+  $('#opList').innerHTML=ops.map(o=>{const pr=pres[o.id]||{online:0,last:0};const on=pr.online>0;const st=on?'آنلاین':(pr.last?'آفلاین · '+fmtT(pr.last):'آفلاین');return `<div class="oprow"><i class="dot ${on?'on':'off'}" style="flex:none"></i><span class="n">${esc(o.name)}${o.role==='manager'?'<span class="tag">مدیر کل</span>':''}${op&&op.id===o.id?'<span class="tag">شما</span>':''}</span><span class="c">${fa(per[o.name]||0)} ثبت</span><span class="c">${st}</span><button class="rm" data-rmop="${esc(o.id)}" type="button">حذف</button></div>`}).join('')||'<p class="note">ادمینی تعریف نشده است.</p>';
+}
+function render(){renderHead();if(view==='home')renderHome();if(view==='admin')renderAdmin()}
+function setView(v){
+  view=v;
+  $$('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
+  $$('.nav button').forEach(b=>b.setAttribute('aria-current',b.dataset.v===v?'page':'false'));
+  $('#searchWrap').style.display=v==='home'?'':'none';
+  render();if(v==='home')$('#q').focus();window.scrollTo(0,0);
+}
+function setPeople(list){
+  people=list.map(x=>x.extra?mk(x.id,x.last||'',x.first||'',x.father,x.phone,x.alias,true,x):mk(x.id,x.name,'',x.father,x.phone,'',false));
+  idx=new Map(people.map(p=>[p.id,p]));
+}
+
+/* ---------- actions ---------- */
+async function mark(pid){
+  if(!op){showLogin();return}
+  if(conn==='off'){toast('آفلاین هستید. ثبت انجام نشد.',null,null,true);return}
+  const cur=att[pid];if(cur){toast('قبلاً توسط '+cur.by+' ثبت شده');return}
+  const p=idx.get(pid);if(!p)return;
+  att[pid]={by:op.name,opId:op.id,at:Date.now()};
+  const qe=$('#q');qe.value='';limit=40;render();qe.focus();
+  toast('✓ '+p.name+' حاضر شد','بازگردانی',()=>unmark(pid,true));
+  try{const r=await api('/api/mark','POST',{pid});att[pid]=r.rec;render()}
+  catch(e){
+    if(e.status===409&&e.data.rec){att[pid]=e.data.rec;toast(e.message,null,null,true)}
+    else{delete att[pid];toast('ثبت نشد: '+e.message,null,null,true)}
+    render();
+  }
+}
+async function unmark(pid,quiet){
+  if(conn==='off'){toast('آفلاین هستید. لغو انجام نشد.',null,null,true);return}
+  const old=att[pid];delete att[pid];render();
+  try{await api('/api/unmark','POST',{pid});if(quiet)toast('حضور لغو شد')}
+  catch(e){if(old)att[pid]=old;render();toast('لغو نشد: '+e.message,null,null,true)}
+}
+let sureId=null,sureT=null;
+function cancelTap(btn,pid){
+  if(sureId===pid){clearTimeout(sureT);sureId=null;unmark(pid);return}
+  sureId=pid;btn.textContent='مطمئنید؟';btn.classList.add('sure');
+  clearTimeout(sureT);sureT=setTimeout(()=>{sureId=null;btn.textContent='لغو';btn.classList.remove('sure')},3000);
+}
+
+async function confirmPids(pids){
+  if(conn==='off'){toast('آفلاین هستید. تایید انجام نشد.',null,null,true);return}
+  const now=Date.now(),old={};
+  pids.forEach(id=>{const a=att[id];if(a&&!a.conf){old[id]=a;a.conf={by:op.name,at:now}}});render();
+  try{const r=await api('/api/confirm','POST',{pids});toast('✓ '+fa(r.n)+' نفر تایید نهایی شد')}
+  catch(e){Object.keys(old).forEach(id=>{if(att[id])delete att[id].conf});render();toast(e.message,null,null,true)}
+}
+/* ---------- events ---------- */
+const q=$('#q');
+q.addEventListener('input',()=>{limit=40;renderHome()});
+q.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    e.preventDefault();
+    const r=search(q.value),c=r.exact.filter(p=>!att[p.id]);
+    if(r.exact.length===1&&c.length===1)mark(c[0].id);
+    else if(r.exact.length>1)toast('چند نتیجه هست. یکی را انتخاب کنید.');
+  }
+});
+$('#qx').onclick=()=>{q.value='';limit=40;renderHome();q.focus()};
+$$('.chip').forEach(c=>c.onclick=()=>{filter=c.dataset.f;limit=40;$$('.chip').forEach(x=>x.setAttribute('aria-pressed',x===c?'true':'false'));renderHome()});
+$('#list').addEventListener('click',e=>{
+  const m=e.target.closest('[data-mark]');if(m){mark(m.dataset.mark);return}
+  const c=e.target.closest('[data-cancel]');if(c){cancelTap(c,c.dataset.cancel);return}
+  const cf=e.target.closest('[data-conf]');if(cf){confirmPids([cf.dataset.conf]);return}
+  if(e.target.closest('[data-confall]')){
+    const ids=people.filter(p=>att[p.id]&&!att[p.id].conf).map(p=>p.id);
+    const b=e.target.closest('[data-confall]');
+    if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='مطمئنید؟ دوباره بزنید';setTimeout(()=>render(),3000);return}
+    confirmPids(ids);return}
+  if(e.target.closest('[data-more]')){limit+=60;renderHome();return}
+  if(e.target.closest('[data-addq]')){openAdd(q.value);return}
+});
+$$('.nav button').forEach(b=>b.onclick=()=>setView(b.dataset.v));
+
+/* login */
+let pickId=null;
+async function showLogin(){
+  $('#pinBox').style.display='none';$('#pin').value='';$('#loginErr').textContent='';
+  try{const r=await api('/api/ops');ops=r.ops}catch(e){}
+  $('#opPick').innerHTML=ops.map(o=>`<button class="pick" data-op="${esc(o.id)}" type="button">${esc(o.name)}</button>`).join('');
+  $('#opHelp').textContent=ops.length?'':'هنوز ادمینی تعریف نشده است. با رمز مدیر در بخش «مدیریت» ادمین بسازید.';
+  $('#opModal').classList.add('on');
+}
+$('#opPick').addEventListener('click',e=>{
+  const b=e.target.closest('[data-op]');if(!b)return;
+  pickId=b.dataset.op;$('#pinFor').textContent='پین '+b.textContent;$('#pinBox').style.display='block';$('#pin').focus();
+});
+async function doLogin(){
+  if(loginBusy||!pickId)return;loginBusy=true;$('#pinGo').disabled=true;$('#loginErr').textContent='';
+  try{
+    const r=await api('/api/login','POST',{opId:pickId,pin:$('#pin').value});
+    token=r.token;op=r.op;store('tok',token);store('op',JSON.stringify(op));
+    $('#pin').value='';$('#opModal').classList.remove('on');await boot();
+  }catch(e){$('#loginErr').textContent=e.message}
+  loginBusy=false;$('#pinGo').disabled=false;
+}
+$('#pinGo').onclick=doLogin;
+$('#pin').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doLogin()}});
+$('#opClose').onclick=()=>$('#opModal').classList.remove('on');
+$('#me').onclick=()=>{
+  if(!op){showLogin();return}
+  $('#meTitle').textContent=op.name+(op.role==='manager'?' (مدیر کل)':'');
+  $('#meSub').textContent=conn==='on'?'آنلاین':'آفلاین';
+  $('#meModal').classList.add('on');
+};
+$('#meClose').onclick=()=>$('#meModal').classList.remove('on');
+$('#meOut').onclick=async()=>{$('#meModal').classList.remove('on');await logout(false)};
+function stopLive(){
+  if(es){es.close();es=null}clearInterval(pingT);clearInterval(watchT);pingT=watchT=null;
+}
+async function logout(silent){
+  const t=token;
+  stopLive();
+  token=null;op=null;att={};pres={};people=[];idx=new Map();conn='connecting';
+  store('tok',null);store('op',null);
+  if(t&&!silent){try{await fetch('/api/logout',{method:'POST',headers:{Authorization:'Bearer '+t}})}catch(e){}}
+  q.value='';render();if(!silent)toast('از حساب خارج شدید');showLogin();
+}
+
+/* admin management (master password) */
+$('#op-add').onclick=async()=>{
+  try{
+    await api('/api/ops','POST',{master:$('#op-master').value,name:$('#op-name').value,pin:$('#op-pin').value,role:$('#op-mgr').checked?'manager':'admin'});
+    $('#op-name').value='';$('#op-pin').value='';toast('ادمین ذخیره شد');await refreshOps();
+  }catch(e){toast(e.message,null,null,true)}
+};
+$('#opList').addEventListener('click',async e=>{
+  const b=e.target.closest('[data-rmop]');if(!b)return;
+  if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='مطمئنید؟';setTimeout(()=>{b.dataset.sure='0';b.textContent='حذف'},3000);return}
+  try{await api('/api/ops/'+b.dataset.rmop,'DELETE',null,{'X-Master':$('#op-master').value});await refreshOps();if(op&&op.id===b.dataset.rmop)logout(true)}
+  catch(err){toast(err.message+(err.status===403?' (رمز مدیر را بالا وارد کنید)':''),null,null,true)}
+});
+async function refreshOps(){try{const r=await api('/api/ops');ops=r.ops;render()}catch(e){}}
+
+/* add person */
+function openAdd(text){
+  setView('add');
+  const t=norm(text||'').split(' ').filter(Boolean);
+  $('#a-ln').value=t[0]||'';$('#a-fn').value=t.slice(1).join(' ');
+  $('#a-fa').value='';$('#a-ph').value='';$('#a-al').value='';$('#addMsg').innerHTML='';
+  setTimeout(()=>$((t.length>1)?'#a-fa':'#a-fn').focus(),50);
+}
+let dupOK=false;
+$('#addForm').addEventListener('input',()=>{dupOK=false;$('#addMsg').innerHTML=''});
+$('#addForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  if(!op){showLogin();return}
+  if(conn==='off'){toast('آفلاین هستید. افزودن انجام نشد.',null,null,true);return}
+  const fn=$('#a-fn').value.trim(),ln=$('#a-ln').value.trim(),fa_=$('#a-fa').value.trim(),al=$('#a-al').value.trim();
+  let ph=norm($('#a-ph').value).replace(/\D/g,'');if(ph.length===10&&ph[0]==='9')ph='0'+ph;
+  if(!/^09\d{9}$/.test(ph)){$('#addMsg').innerHTML='<div class="badbox">شماره تماس باید ۱۱ رقم و با ۰۹ شروع شود.</div>';return}
+  if(!dupOK){
+    const toks=norm(ln+' '+fn).split(' ');
+    const strong=search(ln+' '+fn).exact.slice(0,3).filter(p=>toks.every(t=>p.w.includes(t)));
+    if(strong.length){
+      $('#addMsg').innerHTML='<div class="warnbox">افراد مشابه در لیست هست. اگر همین‌هاست آن را حاضر کنید، وگرنه دوباره «افزودن» را بزنید.</div><div class="list" style="margin-top:8px">'+strong.map(rowHTML).join('')+'</div>';
+      dupOK=true;return;
+    }
+  }
+  const btn=$('#addBtn');btn.disabled=true;
+  try{
+    await api('/api/people','POST',{first:fn,last:ln,father:fa_,phone:ph,alias:al,markNow:$('#a-now').checked});
+    toast('✓ '+ln+' '+fn+' اضافه شد');
+    $('#addForm').reset();$('#a-now').checked=true;$('#addMsg').innerHTML='';dupOK=false;setView('home');
+  }catch(err){toast(err.message,null,null,true)}
+  btn.disabled=false;
+});
+$('#addMsg').addEventListener('click',e=>{const m=e.target.closest('[data-mark]');if(m){mark(m.dataset.mark);setView('home')}});
+
+/* export */
+$('#exp').onclick=async()=>{
+  const msg=$('#expMsg');msg.textContent='در حال ساخت فایل...';
+  try{
+    const r=await fetch('/api/export.xlsx',{headers:{Authorization:'Bearer '+token}});
+    if(!r.ok)throw new Error();
+    const blob=await r.blob();const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);a.download='attendance-'+new Date().toISOString().slice(0,10)+'.xlsx';
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+    msg.textContent='فایل دانلود شد.';
+  }catch(e){msg.textContent='دانلود نشد. دوباره تلاش کنید.'}
+};
+
+/* ---------- realtime ---------- */
+async function load(){
+  const s=await api('/api/state');
+  op=s.me;store('op',JSON.stringify(op));ops=s.ops;att=s.att;pres=s.presence||{};setPeople(s.people);render();
+}
+function beat(){lastBeat=Date.now();if(conn!=='on'){conn='on';renderHead()}}
+function connect(){
+  if(!token)return;
+  if(es){es.close();es=null}
+  es=new EventSource('/api/events?token='+encodeURIComponent(token)+'&cid='+cid);
+  es.onopen=()=>{beat();load().catch(()=>{})};
+  es.onerror=()=>{
+    if(conn!=='off'){conn='off';renderHead()}
+    // an invalid session must not retry forever: this call logs out on 401
+    api('/api/ping','POST',{cid}).then(()=>{}).catch(()=>{});
+  };
+  es.addEventListener('hb',beat);
+  es.addEventListener('presence',e=>{beat();pres=JSON.parse(e.data);renderHead();if(view==='admin')renderAdmin()});
+  es.addEventListener('att',e=>{beat();const d=JSON.parse(e.data);if(d.rec)att[d.pid]=d.rec;else delete att[d.pid];render()});
+  es.addEventListener('person',e=>{
+    beat();const d=JSON.parse(e.data),x=d.person;
+    if(!idx.has(x.id)){const p=mk(x.id,x.last,x.first,x.father,x.phone,x.alias,true,x);people.push(p);idx.set(x.id,p)}
+    if(d.rec)att[x.id]=d.rec;render();
+  });
+  es.addEventListener('ops',()=>{beat();refreshOps()});
+  clearInterval(pingT);clearInterval(watchT);
+  pingT=setInterval(async()=>{
+    if(!token)return;
+    try{const r=await api('/api/ping','POST',{cid});beat();if(r.reconnect)connect()}
+    catch(e){if(e.net&&conn!=='off'){conn='off';renderHead()}}
+  },15000);
+  watchT=setInterval(()=>{
+    if(!token)return;
+    if(!navigator.onLine||Date.now()-lastBeat>40000){
+      if(conn!=='off'){conn='off';renderHead()}
+      if(navigator.onLine&&Date.now()-lastBeat>40000)connect(); // stale stream: reopen
+    }
+  },5000);
+}
+async function boot(){
+  if(!token)return;
+  try{await load();connect();render()}
+  catch(e){if(e.net&&token){conn='off';render();setTimeout(boot,3000)}}
+}
+window.addEventListener('offline',()=>{conn='off';renderHead()});
+window.addEventListener('online',()=>{if(token){conn='connecting';renderHead();connect()}});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&token){
+    if(Date.now()-lastBeat>20000){conn='connecting';renderHead();connect()}
+    else load().catch(()=>{});
+  }
+});
+render();setView('home');
+token=store('tok');
+if(token){try{op=JSON.parse(store('op')||'null')}catch(e){}boot()}
+else showLogin();
+})();
+</script>
+</body>
+</html>
